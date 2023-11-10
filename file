@@ -1,0 +1,114 @@
+ 1. We need 4 Ubuntu  with the following resources: 
+1. 1 Instance with 1CPU, 2RAM, 8 GB Disk - Management t2.small
+2. 3 Instances with 2CPU, 8GB Ram, Di20GB 2-sk Size worker, 1master - t2.large
+2. Management მანქანაზე შექმენით Public Key (ssh-keygen ბრძანებით)  რომელიც განთავსდება cat /home/ubuntu/.ssh/id_rsa.pub  ფაილში,  შემდეგ ეს key ჩაამატეთ Master და Worker-ზე შემდეგ მისამართზე vi /home/ubuntu/.ssh/authorized_keys
+3. გახსენით  შემავალი წვდომა ვორქერებისთის და მასტერებისთის Inbound rule all traffic - Screen
+
+1)Install Docker On Management Master and Worker Instance
+1. wget https://releases.rancher.com/install-docker/20.10.sh
+2. sh 20.10.sh
+3. sudo apt  install docker.io
+4. sudo systemctl start docker
+5. sudo systemctl enable docker
+6. sudo systemctl status docker- Screen
+
+2) Add Docker Group And user On Management Master and Worker Instance'
+1. sudo addgroup wheel
+2. sudo usermod -aG wheel ubuntu
+3. sudo usermod -aG docker ubuntu
+4. sudo chmod 777 /var/run/docker.sock
+
+Install Kubectl on Management:
+1. For Linux: https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+1. Download the latest release with the command:
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+2. Validate the binary (optional) Download the kubectl checksum file:
+curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+3. Validate the kubectl binary against the checksum file:
+echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+4. Install kubectl
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+5. Test to ensure the version you installed is up-to-date:
+kubectl version --client  - Screen
+
+Install Helm on Management, we need for install rancher API:
+1. curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+2. chmod 700 get_helm.sh
+3. ./get_helm.sh  - Screen
+
+Install And Configure on Management
+1. # For Linux 
+curl -s https://api.github.com/repos/rancher/rke/releases/latest | grep download_url | grep amd64 | cut -d '"' -f 4 | wget -qi - 
+chmod +x rke_linux-amd64 
+sudo mv rke_linux-amd64 /usr/local/bin/rke 
+rke --version  - Screen
+2.  rke config --name cluster.yml
+[+] Cluster Level SSH Private Key Path [~/.ssh/id_rsa]: 
+[+] Number of Hosts [1]: 3
+[+] SSH Address of host (1) [none]: Master Instance 1 IP
+[+] SSH Port of host (1) [22]: 22
+[+] SSH Private Key Path of host (master IP) [none]: 
+[-] You have entered empty SSH key path, trying fetch from SSH key parameter
+[+] SSH Private Key of host (master IP) [none]: 
+[-] You have entered empty SSH key, defaulting to cluster level SSH key: ~/.ssh/id_rsa
+[+] SSH User of host (master IP) [ubuntu]: 
+[+] Is host (master IP a Control Plane host (y/n)? [y]: y
+[+] Is host (master IP) a Worker host (y/n)? [n]: n
+[+] Is host (master IP) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (master IP) [none]: 
+[+] Internal IP of host (master IP) [none]: 
+[+] Docker socket path on host (master IP) [/var/run/docker.sock]: 
+[+] SSH Address of host (2) [none]: Worker Instance 1-2 IP
+[+] SSH Port of host (2) [22]: 
+[+] SSH Private Key Path of host () [none]: 
+[-] You have entered empty SSH key path, trying fetch from SSH key parameter
+[+] SSH Private Key of host () [none]: 
+[-] You have entered empty SSH key, defaulting to cluster level SSH key: ~/.ssh/id_rsa
+[+] SSH User of host () [ubuntu]: 
+[+] Is host () a Control Plane host (y/n)? [y]: n
+[+] Is host () a Worker host (y/n)? [n]: y
+[+] Is host () an etcd host (y/n)? [n]: n
+[+] Override Hostname of host () [none]: 
+[+] Internal IP of host () [none]: 
+[+] Docker socket path on host () [/var/run/docker.sock]: 
+[+] Network Plugin Type (flannel, calico, weave, canal, aci) [canal]: 
+[+] Authentication Strategy [x509]: 
+[+] Authorization Mode (rbac, none) [rbac]: 
+[+] Kubernetes Docker image [rancher/hyperkube:v1.24.4-rancher1]: 
+[+] Cluster domain [cluster.local]: 
+[+] Service Cluster IP Range [10.43.0.0/16]: 
+[+] Enable PodSecurityPolicy [n]: 
+[+] Cluster Network CIDR [10.42.0.0/16]: 
+[+] Cluster DNS Service IP [10.43.0.10]: 
+[+] Add addon manifest URLs or YAML files [no]: 
+4. rke up  - Screen
+
+Export KubeConfig on Management
+1. export KUBECONFIG=/home/ubuntu/kube_config_cluster.yml
+2. echo $KUBECONFIG  - Screen
+
+------------------------------------------------------------
+alias k=kubectl                                         #  will already be pre-configured
+
+export do="--dry-run=client -o yaml"     # k create deploy nginx --image=nginx $do
+
+1. The DevOps team would like to get the list of all Namespaces in the cluster. Get the list and save it to namespaces file. 
+cat namespaces -Screen
+2. Create a single Pod of image httpd:2.4.41-alpine in Namespace btu2. The Pod should be named pod1 and the container should be named pod1-container.
+Your manager would like to run a command manually on occasion to output the status of that exact Pod. Please write a command that does this into pod1-status-command.sh. The command should use kubectl.
+k get pods -n btu2 - Screen
+sh pod1-status-command.sh - Screen
+
+3. Team Neptune needs a Job template located at job.yaml. This Job should run image busybox:1.31.0 and execute sleep 2 && echo done. It should be in namespace neptune, run a total of 3 times and should execute 2 runs in parallel. Start the Job and check its history. The job should be named neb-new-job and the container neb-new-job-container.
+k get jobs -n neptune - Screen
+
+5.Create a single Pod named pod4 in Namespace btu-4 of image busybox:1.31.0. The Pod should have a readiness-probe executing cat /tmp/ready. It should initially wait 5 and periodically wait 10 seconds. This will set the container ready only if the file /tmp/ready exists. The Pod should run the command touch /tmp/ready && sleep 1d, which will create the necessary file to be ready and then idles. Create the Pod and confirm it starts.
+k get pods -n btu-4 -Screen
+
+5. Create a new Secret secret1 in btu-5 namespace which contains user=test and pass=pwd.
+k get secret -n btu-5 - Screen
+
+
+
+
+
